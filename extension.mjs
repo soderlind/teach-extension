@@ -1,32 +1,75 @@
 // Extension: teach
-// Intercepts /teach commands and opens HTML output in a browser canvas
+// Intercepts /teach commands, injects the teach skill methodology,
+// and instructs the agent to open HTML lessons in a browser canvas.
 
 import { joinSession } from "@github/copilot-sdk/extension";
+import { readFile } from "node:fs/promises";
+import { join } from "node:path";
+
+const SKILL_DIR = join(
+	process.env.HOME,
+	".agents",
+	"skills",
+	"teach",
+);
+
+async function loadSkillFiles() {
+	const files = [
+		"SKILL.md",
+		"MISSION-FORMAT.md",
+		"RESOURCES-FORMAT.md",
+		"LEARNING-RECORD-FORMAT.md",
+		"GLOSSARY-FORMAT.md",
+	];
+	const sections = [];
+	for (const f of files) {
+		try {
+			let content = await readFile(join(SKILL_DIR, f), "utf-8");
+			// Strip YAML frontmatter from SKILL.md
+			if (f === "SKILL.md") {
+				content = content.replace(/^---[\s\S]*?---\n*/, "");
+			}
+			sections.push(`## ${f}\n\n${content.trim()}`);
+		} catch {
+			// File missing — skip silently
+		}
+	}
+	return sections.join("\n\n---\n\n");
+}
+
+const skillContext = await loadSkillFiles();
 
 const session = await joinSession({
-    hooks: {
-        onUserPromptSubmitted: async (input) => {
-            const match = input.prompt.match(/^\/teach\s+(.*)/s);
-            if (!match) return;
+	hooks: {
+		onUserPromptSubmitted: async (input) => {
+			const match = input.prompt.match(/^\/teach\s+(.*)/s);
+			if (!match) return;
 
-            const topic = match[1].trim();
+			const topic = match[1].trim();
 
-            return {
-                modifiedPrompt: `The user asked to learn about: "${topic}"
+			return {
+				modifiedPrompt: topic,
+				additionalContext: `<teach-skill>
+${skillContext}
 
-Create a single, self-contained HTML file that teaches this topic. The HTML must:
-- Be a complete, valid HTML document with inline CSS and JS (no external dependencies)
-- Have a modern, visually appealing design with good typography and spacing
-- Use a clean color scheme (dark header, light content area)
-- Include clear headings, explanations, and practical code examples where relevant
-- Use syntax highlighting for code blocks (inline CSS-based)
-- Be educational and well-structured with sections
+---
 
-Save the HTML file to a temporary location using bash (e.g. /tmp/teach-<slug>.html where <slug> is a short kebab-case version of the topic), then open it in a browser canvas using open_canvas with canvasId "browser" and the file URL (file:///tmp/teach-<slug>.html). Use a unique instanceId like "teach-<slug>".
+## Browser Canvas Rule
 
-IMPORTANT: You MUST open the browser canvas after writing the file. Do not just show the HTML in chat.`,
-            };
-        },
-    },
-    tools: [],
+After creating any lesson HTML file (in ./lessons/), you MUST open it in a
+browser canvas so the user can read it side-by-side with the chat.
+
+Use open_canvas with:
+- canvasId: "browser"
+- instanceId: "teach-lesson" (reuse this to replace the previous lesson)
+- input.url: the file:// URL pointing to the lesson HTML file
+- input.title: the lesson title
+
+Do NOT just show the HTML in chat. Always open the canvas.
+</teach-skill>`,
+			};
+		},
+	},
+	tools: [],
 });
+
