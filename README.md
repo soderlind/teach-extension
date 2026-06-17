@@ -21,7 +21,7 @@ When you type `/teach <topic>`, the extension:
 
 ## Prerequisites
 
-The extension expects the [teach skill](https://github.com/anthropics/courses) files at `~/.agents/skills/teach/`:
+The extension expects the [teach skill](https://github.com/mattpocock/skills) by [Matt Pocock](https://github.com/mattpocock) at `~/.agents/skills/teach/`:
 
 ```
 ~/.agents/skills/teach/
@@ -43,6 +43,10 @@ cp extension.mjs ~/.copilot/extensions/teach/
 ```
 
 Then reload extensions in Copilot CLI (run `/clear` or restart).
+
+## Credits
+
+The teaching methodology used by this extension is the **teach skill** by [Matt Pocock](https://github.com/mattpocock), from [mattpocock/skills](https://github.com/mattpocock/skills). It provides the mission-driven, stateful learning framework — including lessons, learning records, zone of proximal development, and the knowledge/skills/wisdom philosophy.
 
 ## License
 
